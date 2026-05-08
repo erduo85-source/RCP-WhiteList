@@ -1,4 +1,4 @@
-# ant-codex
+# RCP-WhiteList
 
 基于 `React + Vite + TypeScript + Ant Design` 的后台静态原型工程，用于还原“白名单管理”页面，并验证 GitHub Pages 预览链路。
 
