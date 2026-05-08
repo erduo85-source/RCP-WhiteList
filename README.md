@@ -1,6 +1,6 @@
 # RCP-WhiteList
 
-基于 `React + Vite + TypeScript + Ant Design` 的后台静态原型工程，用于还原“白名单管理”页面，并验证 GitHub Pages 预览链路。
+基于 `React + Vite + TypeScript + Ant Design` 的风控后台原型，用于还原“白名单管理”页面，并验证codex + ant design skill + GitHub Pages 的标准原型生成工作流。
 
 ## 本地运行
 
