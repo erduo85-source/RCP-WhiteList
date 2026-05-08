@@ -161,8 +161,8 @@ const sideMenuItems: MenuProps['items'] = [
     icon: <FileTextOutlined />,
     label: '支付风控',
     children: [
-      { key: 'payment-overview', label: '支付安全概览' },
-      { key: 'payment-log', label: '支付风控日志' },
+      { key: 'payment-overview', label: '支付安全概览', disabled: true },
+      { key: 'payment-log', label: '支付风控日志', disabled: true },
     ],
   },
   {
@@ -170,8 +170,8 @@ const sideMenuItems: MenuProps['items'] = [
     icon: <UserOutlined />,
     label: '用户风控',
     children: [
-      { key: 'user-overview', label: '用户安全概览' },
-      { key: 'user-log', label: '用户风控日志' },
+      { key: 'user-overview', label: '用户安全概览', disabled: true },
+      { key: 'user-log', label: '用户风控日志', disabled: true },
     ],
   },
   {
@@ -179,8 +179,8 @@ const sideMenuItems: MenuProps['items'] = [
     icon: <BellOutlined />,
     label: '画像中心',
     children: [
-      { key: 'tag-management', label: '用户标签管理' },
-      { key: 'behavior-management', label: '风险行为管理' },
+      { key: 'tag-management', label: '用户标签管理', disabled: true },
+      { key: 'behavior-management', label: '风险行为管理', disabled: true },
     ],
   },
   {
@@ -192,6 +192,7 @@ const sideMenuItems: MenuProps['items'] = [
     key: 'operation-log',
     icon: <FileTextOutlined />,
     label: '操作日志',
+    disabled: true,
   },
 ]
 
