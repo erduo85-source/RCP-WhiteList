@@ -13,16 +13,18 @@ import {
 } from '@ant-design/icons'
 import {
   Avatar,
+  Badge,
   Button,
   Card,
   Dropdown,
+  Form,
   Input,
   Layout,
   Menu,
+  Segmented,
   Select,
   Space,
   Table,
-  Tabs,
   Typography,
 } from 'antd'
 import type { MenuProps, TableColumnsType } from 'antd'
@@ -74,10 +76,10 @@ const sideMenuItems: MenuProps['items'] = [
   },
 ]
 
-const tabItems = [
-  { key: 'account', label: '账号' },
-  { key: 'device', label: '设备' },
-  { key: 'ip', label: 'IP' },
+const whitelistTypeOptions = [
+  { label: '账号', value: 'account' },
+  { label: '设备', value: 'device' },
+  { label: 'IP', value: 'ip' },
 ]
 
 const dataSource: WhiteListRow[] = [
@@ -130,7 +132,13 @@ const columns: TableColumnsType<WhiteListRow> = [
       </Space>
     ),
   },
-  { title: '生效状态', dataIndex: 'status', key: 'status', width: 110 },
+  {
+    title: '生效状态',
+    dataIndex: 'status',
+    key: 'status',
+    width: 120,
+    render: (value: string) => <Badge status="success" text={value} />,
+  },
   { title: '生效时间', dataIndex: 'activeAt', key: 'activeAt', width: 160 },
   { title: '失效时间', dataIndex: 'expireAt', key: 'expireAt', width: 160 },
   { title: '添加原因', dataIndex: 'reason', key: 'reason', width: 140 },
@@ -207,35 +215,42 @@ function App() {
                 可针对账号、设备或IP设置风控白名单，加入白名单的对象不再触发风控
               </Paragraph>
             </div>
-            <Tabs items={tabItems} activeKey="account" className="page-tabs" />
+            <Segmented
+              block={false}
+              options={whitelistTypeOptions}
+              value="account"
+              className="page-segmented"
+            />
           </section>
 
           <Card className="filter-card" bordered={false}>
-            <div className="filter-grid">
-              <div className="filter-field">
-                <Text className="field-label">账号</Text>
-                <Input placeholder="请输入账号名或SDKID" size="large" />
+            <Form layout="vertical" className="filter-form">
+              <div className="filter-grid">
+                <Form.Item label="账号" className="filter-item">
+                  <Input placeholder="请输入账号名或SDKID" size="large" />
+                </Form.Item>
+                <Form.Item label="生效状态" className="filter-item">
+                  <Select
+                    size="large"
+                    placeholder="请选择生效状态"
+                    options={[
+                      { value: 'active', label: '生效中' },
+                      { value: 'inactive', label: '已失效' },
+                    ]}
+                  />
+                </Form.Item>
+                <Form.Item label=" " className="filter-item filter-item-actions">
+                  <Space size={12} className="filter-actions">
+                    <Button size="large" icon={<ReloadOutlined />}>
+                      重置
+                    </Button>
+                    <Button size="large" type="primary" icon={<SearchOutlined />}>
+                      查询
+                    </Button>
+                  </Space>
+                </Form.Item>
               </div>
-              <div className="filter-field">
-                <Text className="field-label">生效状态</Text>
-                <Select
-                  size="large"
-                  placeholder="请选择生效状态"
-                  options={[
-                    { value: 'active', label: '生效中' },
-                    { value: 'inactive', label: '已失效' },
-                  ]}
-                />
-              </div>
-              <Space size={16} className="filter-actions">
-                <Button size="large" icon={<ReloadOutlined />}>
-                  重置
-                </Button>
-                <Button size="large" type="primary" icon={<SearchOutlined />}>
-                  查询
-                </Button>
-              </Space>
-            </div>
+            </Form>
           </Card>
 
           <Card
@@ -243,7 +258,7 @@ function App() {
             title={
               <Space size={10}>
                 <span className="section-accent" />
-                <span>账号白名单</span>
+                <Text strong>账号白名单</Text>
               </Space>
             }
             extra={
@@ -258,6 +273,7 @@ function App() {
               columns={columns}
               dataSource={dataSource}
               pagination={false}
+              size="middle"
               className="whitelist-table"
             />
           </Card>
