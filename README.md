@@ -21,7 +21,7 @@ npm run preview
 仓库内已包含 GitHub Pages 工作流：
 
 - 推送到 `main` 或 `master` 会触发 Actions 构建
-- `vite.config.ts` 已配置 `base: /ant-codex/`
+- `vite.config.ts` 已配置 `base: /RCP-WhiteList/`
 - 产物目录为 `dist`
 
 ## 当前页面
