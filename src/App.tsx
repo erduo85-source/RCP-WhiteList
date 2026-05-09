@@ -224,6 +224,21 @@ const templateFileMap: Record<WhitelistType, { fileName: string; label: string }
   },
 }
 
+const parseResultFileMap: Record<WhitelistType, { fileName: string; label: string }> = {
+  account: {
+    fileName: '风控-账号白名单解析结果.xlsx',
+    label: '下载账号白名单解析结果.xlsx',
+  },
+  device: {
+    fileName: '风控-设备白名单解析结果.xlsx',
+    label: '下载设备白名单解析结果.xlsx',
+  },
+  ip: {
+    fileName: '风控-IP白名单解析结果.xlsx',
+    label: '下载IP白名单解析结果.xlsx',
+  },
+}
+
 const accountSeedRows: AccountRow[] = [
   {
     key: 'account-1',
@@ -429,6 +444,7 @@ function App() {
   const whitelistMeta = getWhitelistMeta(whitelistType)
   const isWhitelistView = selectedMenuKey === 'whitelist'
   const currentTemplateMeta = templateFileMap[whitelistType]
+  const currentParseResultMeta = parseResultFileMap[whitelistType]
 
   const filteredAccountRows = useMemo(() => {
     const filters = filterValues.account
@@ -648,6 +664,20 @@ function App() {
       document.body.removeChild(link)
     } catch {
       void message.error('模板下载失败，请稍后重试')
+    }
+  }
+
+  const handleParseResultDownload = () => {
+    try {
+      const href = `${import.meta.env.BASE_URL}parse-results/${encodeURIComponent(currentParseResultMeta.fileName)}`
+      const link = document.createElement('a')
+      link.href = href
+      link.download = currentParseResultMeta.fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch {
+      void message.error('下载解析结果失败，请稍后重试')
     }
   }
 
@@ -1123,13 +1153,13 @@ function App() {
           <span className="brand-text">平台服务中心</span>
         </div>
         <div className="top-nav">
-          <a className="top-nav-item" href="/">
+          <span className="top-nav-item">
             项目管理
-          </a>
-          <a className="top-nav-item active" href="/">
+          </span>
+          <span className="top-nav-item active">
             风控管理
             <DownOutlined className="nav-arrow" />
-          </a>
+          </span>
         </div>
         <div className="top-actions">
           <Dropdown menu={{ items: platformMenuItems }} trigger={['click']}>
@@ -1283,6 +1313,7 @@ function App() {
             <Form.Item
               label="生效时间"
               name="activeRange"
+              required
               rules={[{ validator: validateActiveRange }]}
               className="full-row-field"
             >
@@ -1353,6 +1384,7 @@ function App() {
           <Form.Item
             label="生效时间"
             name="activeRange"
+            required
             rules={[{ validator: validateActiveRange }]}
             className="full-row-field"
           >
@@ -1428,7 +1460,7 @@ function App() {
                       <>
                         <Text>解析成功: {importRows.length}</Text>
                         <Text>解析失败: 0</Text>
-                        <Button type="link" icon={<DownloadOutlined />} onClick={() => void message.info('解析结果下载为原型占位行为，当前未接真实文件。')}>
+                        <Button type="link" icon={<DownloadOutlined />} onClick={handleParseResultDownload}>
                           下载解析结果
                         </Button>
                       </>
