@@ -468,6 +468,12 @@
   color: #9a5a00;
 }
 
+.import-type-hint {
+  color: #8a5400;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .import-tips-content ul {
   margin: 0;
   padding-left: 18px;
@@ -570,6 +576,12 @@
   font-size: 13px;
 }
 
+.upload-error-text {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
 .parsing-status {
   display: inline-flex;
   align-items: center;
@@ -582,6 +594,11 @@
 
 .import-result-section {
   margin-bottom: 4px;
+}
+
+.import-summary-alert {
+  margin-bottom: 12px;
+  border-radius: 12px;
 }
 
 .result-title-row {

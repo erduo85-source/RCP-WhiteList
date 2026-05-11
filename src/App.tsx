@@ -105,11 +105,19 @@ type ImportPreviewFile = {
   sizeLabel: string
 }
 
-type ImportParseStatus = 'idle' | 'parsing' | 'parsed'
+type ImportParseStatus = 'idle' | 'parsing' | 'parsed' | 'failed'
+
+type ImportParseSummary = {
+  total: number
+  success: number
+  failed: number
+  overwrite: number
+}
 
 const platformMenuItems: MenuProps['items'] = [
-  { key: 'platform', label: '游卡用户平台' },
-  { key: 'console', label: '平台服务控制台' },
+  { key: 'project-1', label: '项目1' },
+  { key: 'project-2', label: '项目2' },
+  { key: 'project-3', label: '项目3' },
 ]
 
 const menuContentMap: Record<string, MenuContent> = {
@@ -205,7 +213,7 @@ const whitelistTypeOptions = [
 const importTips = [
   '上传模板：请先下载导入模板文件，按照格式填写后再上传。',
   '上传数量：每份文件最多支持上传 500 条数据。',
-  '冲突校验：系统将根据 SDKID/设备ID/IP 进行冲突检测，重复条目将略过。',
+  '冲突校验：系统将根据 SDKID/设备ID/IP 进行冲突检测，重复条目导入后将覆盖更新生效时间。',
   '有效时长：白名单生效时长最大不超过 1 年，请在文件中明确截止日期。',
 ]
 
@@ -341,6 +349,17 @@ const formatDateTime = (value: Date) => {
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
+const getImportTypeKeyword = (type: WhitelistType) => {
+  switch (type) {
+    case 'account':
+      return '账号白名单'
+    case 'device':
+      return '设备白名单'
+    case 'ip':
+      return 'IP白名单'
+  }
+}
+
 const commonColumns = <T extends BaseRow>(
   onEdit: (record: T) => void,
   onDelete: (record: T) => void,
@@ -438,6 +457,13 @@ function App() {
   const [importPreviewFile, setImportPreviewFile] = useState<ImportPreviewFile | null>(null)
   const [importRows, setImportRows] = useState<DisplayRow[]>([])
   const [importParseStatus, setImportParseStatus] = useState<ImportParseStatus>('idle')
+  const [importParseSummary, setImportParseSummary] = useState<ImportParseSummary>({
+    total: 0,
+    success: 0,
+    failed: 0,
+    overwrite: 0,
+  })
+  const [importParseError, setImportParseError] = useState<string | null>(null)
   const importTimerRef = useRef<number | null>(null)
 
   const currentSection = menuContentMap[selectedMenuKey]
@@ -445,6 +471,7 @@ function App() {
   const isWhitelistView = selectedMenuKey === 'whitelist'
   const currentTemplateMeta = templateFileMap[whitelistType]
   const currentParseResultMeta = parseResultFileMap[whitelistType]
+  const currentImportTypeKeyword = getImportTypeKeyword(whitelistType)
 
   const filteredAccountRows = useMemo(() => {
     const filters = filterValues.account
@@ -642,15 +669,44 @@ function App() {
     createForm.resetFields()
   }
 
-  const closeImportDrawer = () => {
+  const resetImportDrawerState = () => {
     if (importTimerRef.current) {
       window.clearTimeout(importTimerRef.current)
       importTimerRef.current = null
     }
-    setIsImportDrawerOpen(false)
     setImportPreviewFile(null)
     setImportRows([])
     setImportParseStatus('idle')
+    setImportParseSummary({
+      total: 0,
+      success: 0,
+      failed: 0,
+      overwrite: 0,
+    })
+    setImportParseError(null)
+  }
+
+  const closeImportDrawer = () => {
+    const hasImportContext =
+      importPreviewFile !== null || importRows.length > 0 || importParseStatus === 'parsing' || importParseStatus === 'failed'
+
+    if (!hasImportContext) {
+      resetImportDrawerState()
+      setIsImportDrawerOpen(false)
+      return
+    }
+
+    Modal.confirm({
+      title: '确认关闭批量导入',
+      content: '关闭后当前上传文件与解析结果将被清空，是否确认关闭？',
+      okText: '确认关闭',
+      cancelText: '继续编辑',
+      centered: true,
+      onOk: () => {
+        resetImportDrawerState()
+        setIsImportDrawerOpen(false)
+      },
+    })
   }
 
   const handleTemplateDownload = () => {
@@ -896,20 +952,80 @@ function App() {
     ]
   }
 
+  const getImportOverwriteCount = useCallback((rows: DisplayRow[], type: WhitelistType) => {
+    if (type === 'account') {
+      const existing = new Set(accountRows.map((row) => row.sdkid))
+      return rows.filter((row) => existing.has(row.primaryValue)).length
+    }
+    if (type === 'device') {
+      const existing = new Set(deviceRows.map((row) => row.deviceId))
+      return rows.filter((row) => existing.has(row.primaryValue)).length
+    }
+    const existing = new Set(ipRows.map((row) => row.ipAddress))
+    return rows.filter((row) => existing.has(row.primaryValue)).length
+  }, [accountRows, deviceRows, ipRows])
+
+  const validateImportFile = (file: File) => {
+    const fileName = file.name
+    const ext = fileName.split('.').pop()?.toLowerCase()
+
+    if (!ext || !['xls', 'xlsx'].includes(ext)) {
+      return '文件格式错误：请上传 .xls 或 .xlsx 格式文件。'
+    }
+
+    if (!fileName.includes(currentImportTypeKeyword)) {
+      return `模板类型错误：当前为${currentImportTypeKeyword}导入，请上传对应模板文件。`
+    }
+
+    return null
+  }
+
   const handleMockUpload = (file: File) => {
     const sizeLabel = `${(file.size / 1024).toFixed(1)} KB`
     if (importTimerRef.current) {
       window.clearTimeout(importTimerRef.current)
       importTimerRef.current = null
     }
+
+    const parseError = validateImportFile(file)
+
     setImportPreviewFile({
       name: file.name,
       sizeLabel,
     })
     setImportRows([])
+    setImportParseError(null)
+    setImportParseSummary({
+      total: 0,
+      success: 0,
+      failed: 0,
+      overwrite: 0,
+    })
+
+    if (parseError) {
+      setImportParseStatus('failed')
+      setImportParseError(parseError)
+      setImportParseSummary({
+        total: 0,
+        success: 0,
+        failed: 1,
+        overwrite: 0,
+      })
+      void message.error(parseError)
+      return false
+    }
+
     setImportParseStatus('parsing')
     importTimerRef.current = window.setTimeout(() => {
-      setImportRows(buildMockImportRows(whitelistType))
+      const nextRows = buildMockImportRows(whitelistType)
+      const overwrite = getImportOverwriteCount(nextRows, whitelistType)
+      setImportRows(nextRows)
+      setImportParseSummary({
+        total: nextRows.length,
+        success: nextRows.length,
+        failed: 0,
+        overwrite,
+      })
       setImportParseStatus('parsed')
       importTimerRef.current = null
       void message.success('文件上传成功，已生成解析结果')
@@ -930,21 +1046,28 @@ function App() {
     }
 
     let imported = 0
-    let skipped = 0
+    let overwritten = 0
 
     if (whitelistType === 'account') {
       setAccountRows((prev) => {
-        const existing = new Set(prev.map((row) => row.sdkid))
-        const nextRows: AccountRow[] = []
-
-        importRows.forEach((row) => {
-          if (existing.has(row.primaryValue)) {
-            skipped += 1
-            return
+        const incoming = new Map(importRows.map((row) => [row.primaryValue, row]))
+        const nextPrev = prev.map((row) => {
+          const matched = incoming.get(row.sdkid)
+          if (!matched) {
+            return row
           }
+          overwritten += 1
+          incoming.delete(row.sdkid)
+          return {
+            ...row,
+            activeAt: matched.activeAt,
+            expireAt: matched.expireAt,
+          }
+        })
 
-          existing.add(row.primaryValue)
-          nextRows.push({
+        const nextRows: AccountRow[] = Array.from(incoming.values()).map((row) => {
+          imported += 1
+          return {
             key: row.key,
             sdkid: row.primaryValue,
             accountName: row.secondaryValue ?? '批量导入账号',
@@ -954,25 +1077,31 @@ function App() {
             reason: row.reason,
             operator: 'wangjian02',
             updatedAt: formatDateTime(new Date()),
-          })
-          imported += 1
+          }
         })
 
-        return [...nextRows, ...prev]
+        return [...nextRows, ...nextPrev]
       })
     } else if (whitelistType === 'device') {
       setDeviceRows((prev) => {
-        const existing = new Set(prev.map((row) => row.deviceId))
-        const nextRows: DeviceRow[] = []
-
-        importRows.forEach((row) => {
-          if (existing.has(row.primaryValue)) {
-            skipped += 1
-            return
+        const incoming = new Map(importRows.map((row) => [row.primaryValue, row]))
+        const nextPrev = prev.map((row) => {
+          const matched = incoming.get(row.deviceId)
+          if (!matched) {
+            return row
           }
+          overwritten += 1
+          incoming.delete(row.deviceId)
+          return {
+            ...row,
+            activeAt: matched.activeAt,
+            expireAt: matched.expireAt,
+          }
+        })
 
-          existing.add(row.primaryValue)
-          nextRows.push({
+        const nextRows: DeviceRow[] = Array.from(incoming.values()).map((row) => {
+          imported += 1
+          return {
             key: row.key,
             deviceId: row.primaryValue,
             status: '生效中',
@@ -981,25 +1110,31 @@ function App() {
             reason: row.reason,
             operator: 'wangjian02',
             updatedAt: formatDateTime(new Date()),
-          })
-          imported += 1
+          }
         })
 
-        return [...nextRows, ...prev]
+        return [...nextRows, ...nextPrev]
       })
     } else {
       setIpRows((prev) => {
-        const existing = new Set(prev.map((row) => row.ipAddress))
-        const nextRows: IpRow[] = []
-
-        importRows.forEach((row) => {
-          if (existing.has(row.primaryValue)) {
-            skipped += 1
-            return
+        const incoming = new Map(importRows.map((row) => [row.primaryValue, row]))
+        const nextPrev = prev.map((row) => {
+          const matched = incoming.get(row.ipAddress)
+          if (!matched) {
+            return row
           }
+          overwritten += 1
+          incoming.delete(row.ipAddress)
+          return {
+            ...row,
+            activeAt: matched.activeAt,
+            expireAt: matched.expireAt,
+          }
+        })
 
-          existing.add(row.primaryValue)
-          nextRows.push({
+        const nextRows: IpRow[] = Array.from(incoming.values()).map((row) => {
+          imported += 1
+          return {
             key: row.key,
             ipAddress: row.primaryValue,
             status: '生效中',
@@ -1008,16 +1143,16 @@ function App() {
             reason: row.reason,
             operator: 'wangjian02',
             updatedAt: formatDateTime(new Date()),
-          })
-          imported += 1
+          }
         })
 
-        return [...nextRows, ...prev]
+        return [...nextRows, ...nextPrev]
       })
     }
 
-    message.success(`继续导入完成：成功 ${imported} 条，跳过 ${skipped} 条`)
-    closeImportDrawer()
+    message.success(`导入完成：新增 ${imported} 条，覆盖 ${overwritten} 条`)
+    resetImportDrawerState()
+    setIsImportDrawerOpen(false)
   }
 
   const currentImportColumns = useMemo(() => {
@@ -1164,7 +1299,7 @@ function App() {
         <div className="top-actions">
           <Dropdown menu={{ items: platformMenuItems }} trigger={['click']}>
             <button className="platform-switcher" type="button">
-              游卡用户平台
+              项目1
               <DownOutlined />
             </button>
           </Dropdown>
@@ -1400,7 +1535,7 @@ function App() {
       </Modal>
 
       <Drawer
-        title="批量导入白名单"
+        title={`批量导入${whitelistMeta.tableTitle}`}
         placement="right"
         width={960}
         open={isImportDrawerOpen}
@@ -1422,6 +1557,7 @@ function App() {
           className="import-tips"
           description={
             <div className="import-tips-content">
+              <Text className="import-type-hint">当前导入类型：{whitelistMeta.tableTitle}，请上传对应模板文件。</Text>
               <ul>
                 {importTips.map((tip) => (
                   <li key={tip}>{tip}</li>
@@ -1456,16 +1592,26 @@ function App() {
                         <Spin size="small" />
                         <Text>解析中...</Text>
                       </span>
+                    ) : importParseStatus === 'failed' ? (
+                      <>
+                        <Text>总解析数: {importParseSummary.total}</Text>
+                        <Text>解析成功: {importParseSummary.success}</Text>
+                        <Text>解析失败: {importParseSummary.failed}</Text>
+                      </>
                     ) : (
                       <>
-                        <Text>解析成功: {importRows.length}</Text>
-                        <Text>解析失败: 0</Text>
+                        <Text>总解析数: {importParseSummary.total}</Text>
+                        <Text>解析成功: {importParseSummary.success}</Text>
+                        <Text>解析失败: {importParseSummary.failed}</Text>
                         <Button type="link" icon={<DownloadOutlined />} onClick={handleParseResultDownload}>
                           下载解析结果
                         </Button>
                       </>
                     )}
                   </Space>
+                  {importParseStatus === 'failed' && importParseError ? (
+                    <Text type="danger" className="upload-error-text">{importParseError}</Text>
+                  ) : null}
                 </div>
               </div>
               <Upload {...importUploadProps}>
@@ -1488,9 +1634,17 @@ function App() {
             <div className="result-title-left">
               <span className="section-accent" />
               <Text strong>解析结果</Text>
-              {importParseStatus === 'parsed' && importRows.length > 0 ? <span className="result-count-tag">{importRows.length} 条记录</span> : null}
+              {importParseStatus === 'parsed' && importParseSummary.total > 0 ? <span className="result-count-tag">共 {importParseSummary.total} 条</span> : null}
             </div>
           </div>
+          {importParseStatus === 'parsed' && importParseSummary.success > 0 ? (
+            <Alert
+              type="info"
+              showIcon={false}
+              className="import-summary-alert"
+              message={`共成功解析 ${importParseSummary.success} 条，其中 ${importParseSummary.overwrite} 条已添加过的白名单，导入后将覆盖更新生效时间`}
+            />
+          ) : null}
           <Card className="import-result-card" bordered={false}>
             <Table
               rowKey="key"
@@ -1503,6 +1657,8 @@ function App() {
                 emptyText:
                   importParseStatus === 'parsing' ? (
                     <Empty description="文件解析中，请稍候..." />
+                  ) : importParseStatus === 'failed' ? (
+                    <Empty description={importParseError ?? '模板校验未通过，请重新上传对应模板文件'} />
                   ) : (
                     <Empty description="暂无解析结果，请先上传文件" />
                   ),
