@@ -40,6 +40,7 @@ import {
 import type { UploadProps } from 'antd'
 import dayjs from 'dayjs'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { ProfileQueryEntryPage } from './features/profile-query/entry/ProfileQueryEntryPage'
 import './App.css'
 
 const { Header, Sider, Content } = Layout
@@ -121,25 +122,15 @@ const platformMenuItems: MenuProps['items'] = [
 ]
 
 const menuContentMap: Record<string, MenuContent> = {
-  'payment-overview': {
-    title: '支付安全概览',
-    description: '展示支付风控的安全概览、关键指标与近期风险趋势。',
-    sectionTitle: '支付安全概览',
+  'risk-payment': {
+    title: '支付风控管理',
+    description: '支付风控管理模块暂保留为背景导航占位，本轮不展开子菜单与内容明细。',
+    sectionTitle: '支付风控管理',
   },
-  'payment-log': {
-    title: '支付风控日志',
-    description: '查看支付风控相关操作记录、命中日志与处理轨迹。',
-    sectionTitle: '支付风控日志',
-  },
-  'user-overview': {
-    title: '用户安全概览',
-    description: '查看用户风控总体概览、风险分布与近期异常情况。',
-    sectionTitle: '用户安全概览',
-  },
-  'user-log': {
-    title: '用户风控日志',
-    description: '查看用户风控处置记录、风险事件明细与审计信息。',
-    sectionTitle: '用户风控日志',
+  'risk-user': {
+    title: '用户风控管理',
+    description: '用户风控管理模块暂保留为背景导航占位，本轮不展开子菜单与内容明细。',
+    sectionTitle: '用户风控管理',
   },
   'tag-management': {
     title: '用户标签管理',
@@ -151,15 +142,15 @@ const menuContentMap: Record<string, MenuContent> = {
     description: '维护风险行为规则、识别维度与行为分级策略。',
     sectionTitle: '风险行为管理',
   },
-  whitelist: {
-    title: '白名单管理',
-    description: '可针对账号、设备或IP设置风控白名单，加入白名单的对象不再触发风控。',
-    sectionTitle: '白名单管理',
+  'profile-query': {
+    title: '用户画像查询',
+    description: '支持从账号、设备、IP维度进行用户洞察，快速定位登录、注册、支付的风险',
+    sectionTitle: '用户画像查询',
   },
-  'operation-log': {
-    title: '操作日志',
-    description: '查看平台关键操作记录、责任人信息与时间线追踪。',
-    sectionTitle: '操作日志',
+  whitelist: {
+    title: '风控白名单管理',
+    description: '可针对账号、设备或IP设置风控白名单，加入白名单的对象不再触发风控。',
+    sectionTitle: '风控白名单管理',
   },
 }
 
@@ -167,26 +158,19 @@ const sideMenuItems: MenuProps['items'] = [
   {
     key: 'risk-payment',
     icon: <FileTextOutlined />,
-    label: '支付风控',
-    children: [
-      { key: 'payment-overview', label: '支付安全概览', disabled: true },
-      { key: 'payment-log', label: '支付风控日志', disabled: true },
-    ],
+    label: '支付风控管理',
   },
   {
     key: 'risk-user',
     icon: <UserOutlined />,
-    label: '用户风控',
-    children: [
-      { key: 'user-overview', label: '用户安全概览', disabled: true },
-      { key: 'user-log', label: '用户风控日志', disabled: true },
-    ],
+    label: '用户风控管理',
   },
   {
     key: 'risk-profile',
     icon: <BellOutlined />,
-    label: '画像中心',
+    label: '用户画像中心',
     children: [
+      { key: 'profile-query', label: '用户画像查询' },
       { key: 'tag-management', label: '用户标签管理', disabled: true },
       { key: 'behavior-management', label: '风险行为管理', disabled: true },
     ],
@@ -194,13 +178,7 @@ const sideMenuItems: MenuProps['items'] = [
   {
     key: 'whitelist',
     icon: <UserOutlined />,
-    label: '白名单管理',
-  },
-  {
-    key: 'operation-log',
-    icon: <FileTextOutlined />,
-    label: '操作日志',
-    disabled: true,
+    label: '风控白名单管理',
   },
 ]
 
@@ -435,8 +413,8 @@ const getWhitelistMeta = (type: WhitelistType) => {
 }
 
 function App() {
-  const [selectedMenuKey, setSelectedMenuKey] = useState('whitelist')
-  const [openMenuKeys, setOpenMenuKeys] = useState(['risk-payment', 'risk-user', 'risk-profile'])
+  const [selectedMenuKey, setSelectedMenuKey] = useState('profile-query')
+  const [openMenuKeys, setOpenMenuKeys] = useState(['risk-profile'])
   const [whitelistType, setWhitelistType] = useState<WhitelistType>('account')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [filterValues, setFilterValues] = useState<Record<WhitelistType, FilterValues>>({
@@ -469,6 +447,7 @@ function App() {
   const currentSection = menuContentMap[selectedMenuKey]
   const whitelistMeta = getWhitelistMeta(whitelistType)
   const isWhitelistView = selectedMenuKey === 'whitelist'
+  const isProfileQueryView = selectedMenuKey === 'profile-query'
   const currentTemplateMeta = templateFileMap[whitelistType]
   const currentParseResultMeta = parseResultFileMap[whitelistType]
   const currentImportTypeKeyword = getImportTypeKeyword(whitelistType)
@@ -1285,21 +1264,21 @@ function App() {
       <Header className="top-header">
         <div className="brand">
           <div className="brand-mark">k</div>
-          <span className="brand-text">平台服务中心</span>
+          <span className="brand-text">风控管理平台</span>
         </div>
         <div className="top-nav">
           <span className="top-nav-item">
-            项目管理
+            风险监控
           </span>
           <span className="top-nav-item active">
-            风控管理
+            风险管理
             <DownOutlined className="nav-arrow" />
           </span>
         </div>
         <div className="top-actions">
           <Dropdown menu={{ items: platformMenuItems }} trigger={['click']}>
             <button className="platform-switcher" type="button">
-              项目1
+              搜索账号 / 设备 / IP
               <DownOutlined />
             </button>
           </Dropdown>
@@ -1328,104 +1307,110 @@ function App() {
           />
         </Sider>
         <Content className="page-content">
-          <section className="page-head">
-            <div className="page-head-main">
-              <Title level={3}>{currentSection.title}</Title>
-              <Text className="page-head-subtitle">
-                {isWhitelistView
-                  ? '可针对账号、设备或IP设置风控白名单，加入白名单的对象不再触发风控'
-                  : currentSection.description}
-              </Text>
-            </div>
-            {isWhitelistView ? (
-              <Segmented
-                block={false}
-                options={whitelistTypeOptions}
-                value={whitelistType}
-                onChange={handleTypeChange}
-                className="page-segmented"
-              />
-            ) : null}
-          </section>
-
-          {isWhitelistView ? (
+          {isProfileQueryView ? (
+            <ProfileQueryEntryPage />
+          ) : (
             <>
-              <Card className="filter-card" bordered={false}>
-                <Form
-                  layout="vertical"
-                  className="filter-form"
-                  form={filterForm}
-                  initialValues={filterValues[whitelistType]}
-                  onFinish={handleFilterSubmit}
-                >
-                  <div className="filter-grid">
-                    <Form.Item label={whitelistMeta.queryLabel} name="keyword" className="filter-item">
-                      <Input placeholder={whitelistMeta.queryPlaceholder} size="large" />
-                    </Form.Item>
-                    <Form.Item label="生效状态" name="status" className="filter-item">
-                      <Select
-                        size="large"
-                        placeholder="请选择生效状态"
-                        options={[
-                          { value: 'active', label: '生效中' },
-                          { value: 'inactive', label: '已失效' },
-                          { value: 'disabled', label: '未开启' },
-                        ]}
-                      />
-                    </Form.Item>
-                    <Form.Item label=" " className="filter-item filter-item-actions">
-                      <Space size={12} className="filter-actions">
-                        <Button size="large" icon={<ReloadOutlined />} onClick={handleFilterReset}>
-                          重置
+              <section className="page-head">
+                <div className="page-head-main">
+                  <Title level={3}>{currentSection.title}</Title>
+                  <Text className="page-head-subtitle">
+                    {isWhitelistView
+                      ? '可针对账号、设备或IP设置风控白名单，加入白名单的对象不再触发风控'
+                      : currentSection.description}
+                  </Text>
+                </div>
+                {isWhitelistView ? (
+                  <Segmented
+                    block={false}
+                    options={whitelistTypeOptions}
+                    value={whitelistType}
+                    onChange={handleTypeChange}
+                    className="page-segmented"
+                  />
+                ) : null}
+              </section>
+
+              {isWhitelistView ? (
+                <>
+                  <Card className="filter-card" bordered={false}>
+                    <Form
+                      layout="vertical"
+                      className="filter-form"
+                      form={filterForm}
+                      initialValues={filterValues[whitelistType]}
+                      onFinish={handleFilterSubmit}
+                    >
+                      <div className="filter-grid">
+                        <Form.Item label={whitelistMeta.queryLabel} name="keyword" className="filter-item">
+                          <Input placeholder={whitelistMeta.queryPlaceholder} size="large" />
+                        </Form.Item>
+                        <Form.Item label="生效状态" name="status" className="filter-item">
+                          <Select
+                            size="large"
+                            placeholder="请选择生效状态"
+                            options={[
+                              { value: 'active', label: '生效中' },
+                              { value: 'inactive', label: '已失效' },
+                              { value: 'disabled', label: '未开启' },
+                            ]}
+                          />
+                        </Form.Item>
+                        <Form.Item label=" " className="filter-item filter-item-actions">
+                          <Space size={12} className="filter-actions">
+                            <Button size="large" icon={<ReloadOutlined />} onClick={handleFilterReset}>
+                              重置
+                            </Button>
+                            <Button size="large" type="primary" icon={<SearchOutlined />} htmlType="submit">
+                              查询
+                            </Button>
+                          </Space>
+                        </Form.Item>
+                      </div>
+                    </Form>
+                  </Card>
+
+                  <Card
+                    className="table-card"
+                    title={
+                      <Space size={10}>
+                        <span className="section-accent" />
+                        <Text strong>{whitelistMeta.tableTitle}</Text>
+                      </Space>
+                    }
+                    extra={
+                      <Space size={12}>
+                        <Button type="primary" onClick={handleCreateModalOpen}>
+                          + 新增白名单
                         </Button>
-                        <Button size="large" type="primary" icon={<SearchOutlined />} htmlType="submit">
-                          查询
+                        <Button
+                          icon={<DownloadOutlined />}
+                          onClick={() => setIsImportDrawerOpen(true)}
+                        >
+                          批量导入
                         </Button>
                       </Space>
-                    </Form.Item>
-                  </div>
-                </Form>
-              </Card>
-
-              <Card
-                className="table-card"
-                title={
-                  <Space size={10}>
-                    <span className="section-accent" />
-                    <Text strong>{whitelistMeta.tableTitle}</Text>
-                  </Space>
-                }
-                extra={
-                  <Space size={12}>
-                    <Button type="primary" onClick={handleCreateModalOpen}>
-                      + 新增白名单
-                    </Button>
-                    <Button
-                      icon={<DownloadOutlined />}
-                      onClick={() => setIsImportDrawerOpen(true)}
-                    >
-                      批量导入
-                    </Button>
-                  </Space>
-                }
-              >
-                <Table
-                  rowKey="key"
-                  columns={currentColumns}
-                  dataSource={currentRows}
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: false,
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
-                  }}
-                  size="middle"
-                  className="whitelist-table"
-                  scroll={{ x: 1320, y: 420 }}
-                />
-              </Card>
+                    }
+                  >
+                    <Table
+                      rowKey="key"
+                      columns={currentColumns}
+                      dataSource={currentRows}
+                      pagination={{
+                        pageSize: 10,
+                        showSizeChanger: false,
+                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                      }}
+                      size="middle"
+                      className="whitelist-table"
+                      scroll={{ x: 1320, y: 420 }}
+                    />
+                  </Card>
+                </>
+              ) : (
+                renderPlaceholderPanel()
+              )}
             </>
-          ) : (
-            renderPlaceholderPanel()
           )}
         </Content>
       </Layout>
@@ -1438,7 +1423,7 @@ function App() {
         okText="确定"
         cancelText="取消"
         centered
-        destroyOnClose
+        destroyOnHidden
         className="create-modal"
         width={560}
       >
@@ -1485,7 +1470,7 @@ function App() {
         okText="确定"
         cancelText="取消"
         centered
-        destroyOnClose
+        destroyOnHidden
         className="create-modal"
         width={560}
       >
@@ -1537,7 +1522,7 @@ function App() {
       <Drawer
         title={`批量导入${whitelistMeta.tableTitle}`}
         placement="right"
-        width={960}
+        size={960}
         open={isImportDrawerOpen}
         onClose={closeImportDrawer}
         className="import-drawer"
